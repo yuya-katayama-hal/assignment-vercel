@@ -5,7 +5,7 @@ const nextConfig = {
   basePath:
     "/" +
     process.env.REPO_NAME +
-    (process.env.PR_NUMBER ? `/pr/${process.env.PR_NUMBER}/` : "/"),
+    (process.env.PR_NUMBER ? `/pr/${process.env.PR_NUMBER}` : ""),
 };
 
 module.exports = nextConfig;
