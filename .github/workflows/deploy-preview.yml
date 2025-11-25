@@ -1,0 +1,65 @@
+name: Deploy Preview
+
+permissions:
+  contents: write
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - closed
+      - reopened
+      - synchronize
+
+jobs:
+  build-and-deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: "main"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: echo "REPOSITORY_NAME=${GITHUB_REPOSITORY#${GITHUB_REPOSITORY_OWNER}/}" >> $GITHUB_ENV
+      - name: build
+        run: |
+          pushd main
+          npm install
+          export REPO_NAME=${{ env.REPOSITORY_NAME }}
+          export PR_NUMBER=${{ github.event.pull_request.number }}
+          npm run build
+          popd
+      - uses: actions/checkout@v5
+        with:
+          ref: "gh-pages"
+          path: "gh-pages"
+      - run: |
+          mkdir -p gh-pages/pr/${{ github.event.pull_request.number }}
+          cp -r main/out/* gh-pages/pr/${{ github.event.pull_request.number }}/
+      - name: commit-and-push
+        run: |
+          pushd gh-pages
+          git config user.name "GitHub Actions"
+          git config user.email "action@github.com"
+          git add .
+          git commit -m "Update"
+          git push
+          popd
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: "gh-pages"
+      - run: |
+          rm -rf pr/${{ github.event.pull_request.number }}
+          git config user.name "GitHub Actions"
+          git config user.email "action@github.com"
+          git add .
+          git commit -m "Cleanup"
+          git push
